@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aadhaar Center Planning & Analytics</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="dark-theme">
+    
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay active">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fa-solid fa-fingerprint text-primary" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
+                <h2>Aadhaar AI System</h2>
+                <p>Login to access the dashboard</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Email / User ID</label>
+                    <input type="text" id="login-email" class="form-control" placeholder="admin@aadhaar.gov.in" required>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Password</label>
+                    <input type="password" id="login-pass" class="form-control" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-large w-100" style="margin-top: 1.5rem;">Secure Login</button>
+            </form>
+            <div class="login-footer">
+                <p>Demo: Use any credentials to login.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div class="app-container hidden" id="main-app">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar hidden" id="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-fingerprint text-primary"></i>
+                <h2>Aadhaar AI</h2>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-target="dashboard-page">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard
+                </a>
+                <a href="#" class="nav-item" data-target="heatmap-page">
+                    <i class="fa-solid fa-map-location-dot"></i> Heatmap
+                </a>
+                <a href="#" class="nav-item" data-target="reports-page">
+                    <i class="fa-solid fa-file-invoice"></i> Reports
+                </a>
+                <a href="#" class="nav-item" data-target="upload-page">
+                    <i class="fa-solid fa-upload"></i> New Upload
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <p>System Status: <span class="status-indicator online"></span> Online</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Top Header (Hidden on Landing) -->
+            <header class="top-header hidden" id="top-header">
+                <div class="header-title">
+                    <h1 id="page-title">Dashboard Overview</h1>
+                    <p class="subtitle" id="page-subtitle">Key metrics and center predictions</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline" id="theme-toggle">
+                        <i class="fa-solid fa-sun"></i>
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                        <span id="current-user-role">Admin</span>
+                    </div>
+                    <button class="btn btn-outline" id="logout-btn" style="margin-left: 1rem; border: none; color: #ef4444;" title="Logout">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Page Container -->
+            <div class="page-container">
+                
+                <!-- 1. Landing / Upload Page -->
+                <section id="upload-page" class="page-section active">
+                    <div class="landing-content">
+                        <div class="hero-text">
+                            <h1 class="gradient-text">Aadhaar Center Planning & Analytics</h1>
+                            <p>AI-powered demographic analysis to predict and optimize Aadhaar center placement across regions.</p>
+                        </div>
+                        
+                        <div class="upload-card">
+                            <div class="upload-icon">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <h3>Upload Demographic Data</h3>
+                            <p>Supports .csv and .xlsx files</p>
+                            
+                            <form id="upload-form" enctype="multipart/form-data">
+                                <input type="file" id="dataset" name="file" accept=".csv, .xlsx" class="file-input" hidden>
+                                <div class="upload-area" id="upload-area">
+                                    <span class="upload-prompt" id="upload-prompt">Drag & Drop or <strong>Browse</strong></span>
+                                </div>
+                                <div id="selected-file-info" class="hidden"></div>
+                                <button type="submit" class="btn btn-primary btn-large w-100 mt-4" id="upload-btn" disabled>
+                                    Analyze Data <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                </button>
+                            </form>
+                            <div class="hint">Ensure dataset has 'city', 'population', and 'aadhaar_centers' columns.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Processing Page -->
+                <section id="processing-page" class="page-section hidden">
+                    <div class="processing-container">
+                        <div class="loader-circle"></div>
+                        <h2 class="processing-title">Training AI Model...</h2>
+                        <p class="processing-subtitle">Analyzing population density and existing infrastructure.</p>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progress-bar"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Results Dashboard Page -->
+                <section id="dashboard-page" class="page-section hidden">
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-blue"><i class="fa-solid fa-map"></i></div>
+                            <div class="kpi-info">
+                                <h3>Total Areas</h3>
+                                <p class="kpi-value" id="kpi-total-areas">-</p>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="kpi-info">
+                                <h3>High Demand Zones</h3>
+                                <p class="kpi-value" id="kpi-high-demand">-</p>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-yellow"><i class="fa-solid fa-battery-half"></i></div>
+                            <div class="kpi-info">
+                                <h3>Medium Demand Zones</h3>
+                                <p class="kpi-value" id="kpi-medium-demand">-</p>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon icon-purple"><i class="fa-solid fa-building-circle-check"></i></div>
+                            <div class="kpi-info">
+                                <h3>Total Centers Needed</h3>
+                                <p class="kpi-value" id="kpi-total-needed">-</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="charts-grid dashboard-charts">
+                        <div class="chart-card wide">
+                            <div class="chart-header">
+                                <h3>Top Areas Center Requirements</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="barChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3>Demand Zone Distribution</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="pieChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3>Population vs Required Centers</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="scatterChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-card wide">
+                            <div class="chart-header">
+                                <h3>Existing vs Predicted Centers</h3>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="comparisonChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Heatmap Page -->
+                <section id="heatmap-page" class="page-section hidden">
+                    <div class="heatmap-container">
+                        <div class="map-controls">
+                            <div class="filter-group">
+                                <label>Demand Level:</label>
+                                <select id="map-filter" class="form-control">
+                                    <option value="all">All Zones</option>
+                                    <option value="High">High Demand (Red)</option>
+                                    <option value="Medium">Medium Demand (Yellow)</option>
+                                    <option value="Low">Low Demand (Green)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="leaflet-map" class="map-view"></div>
+                        <div class="map-legend">
+                            <div class="legend-item"><span class="legend-color high"></span> High Demand (Shortage > 4)</div>
+                            <div class="legend-item"><span class="legend-color medium"></span> Medium Demand (Shortage 1-4)</div>
+                            <div class="legend-item"><span class="legend-color low"></span> Low Demand (Shortage 0)</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. Reports Page -->
+                <section id="reports-page" class="page-section hidden">
+                    <div class="report-controls">
+                        <div class="search-box">
+                            <i class="fa-solid fa-search"></i>
+                            <input type="text" id="report-search" placeholder="Search areas...">
+                        </div>
+                        <div class="export-actions">
+                            <button class="btn btn-outline" id="export-excel"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+                            <button class="btn btn-primary" id="export-pdf"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+                        </div>
+                    </div>
+                    
+                    <div id="report-document" class="report-document">
+                        <!-- AI Insights Section -->
+                        <div class="report-header">
+                            <h2>Aadhaar Center Optimization: ML Analysis Report</h2>
+                            <p class="report-date" id="report-date"></p>
+                        </div>
+                        
+                        <div class="report-section">
+                            <h3>A. Executive Summary</h3>
+                            <p id="narrative-exec-summary">Generating insights...</p>
+                        </div>
+                        
+                        <div class="report-section">
+                            <h3>B. Data Abstraction</h3>
+                            <p id="narrative-data-abstraction">Generating insights...</p>
+                        </div>
+                        
+                        <div class="report-section">
+                            <h3>C. Analytical Insights</h3>
+                            <p id="narrative-analytics">Generating insights...</p>
+                        </div>
+                        
+                        <div class="report-section">
+                            <h3>D. Output Interpretation</h3>
+                            <p id="narrative-interpretation">Generating insights...</p>
+                        </div>
+                        
+                        <div class="report-section">
+                            <h3>E. Recommendations</h3>
+                            <p id="narrative-recommendation">Generating insights...</p>
+                        </div>
+
+                        <div class="report-section report-chart-section">
+                            <h3>F. Visual Prioritization</h3>
+                            <div class="embedded-chart-container" style="height: 300px; width: 100%; margin-bottom: 20px;">
+                                <canvas id="report-bar-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="report-section" style="margin-bottom: 0;">
+                            <h3>G. Full Dataset Projections</h3>
+                        </div>
+
+                        <div class="table-container" style="border: none; box-shadow: none; border-radius: 0; background: transparent;">
+                            <table class="data-table" id="report-table">
+                                <thead>
+                                <tr>
+                                    <th>Area / City</th>
+                                    <th>Population</th>
+                                    <th>Aadhaar Requests</th>
+                                    <th>Existing Centers</th>
+                                    <th>Predicted Needed</th>
+                                    <th>Center Gap</th>
+                                    <th>Demand Level</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div> <!-- End reporting document -->
+                <div class="pagination-info" id="table-pagination-info">Showing 0 to 0 of 0 entries</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <!-- SweetAlert for nice toast notifications -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Leaflet.js -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- html2pdf for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- App Scripts -->
+    <script src="js/dashboard.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>
