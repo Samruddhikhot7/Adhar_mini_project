@@ -2,25 +2,41 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
+from sqlalchemy import create_engine
+import os
 
 # -------------------------------
 # Step 1: Load Dataset
 # -------------------------------
-df = pd.read_csv("final_dataset_with_aadhaar_centers.csv")
+
+# Get current folder path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# File path (same folder)
+file_path = r"C:\Users\saiba\OneDrive\Desktop\Adhar_mini_project\final_dataset_with_aadhaar_centers.csv"
+
+df = pd.read_csv(file_path)
+
+# Clean column names (VERY IMPORTANT)
+df.columns = df.columns.str.lower().str.strip()
 
 # -------------------------------
 # Step 2: Feature Engineering
 # -------------------------------
 
-# Convert to decimal
-df["BirthRate"] = df["birthrate"] / 100
-df["MigrationRate"] = df["migrationrate"] / 100
-df["AgeFactor"] = df["age_group15_19"] / 100
+df["birthrate"] = df["birthrate"].fillna(0)
+df["migrationrate"] = df["migrationrate"].fillna(0)
+df["age_group15_19"] = df["age_group15_19"].fillna(0)
 
-# Interaction features (VERY IMPORTANT)
-df["Pop_Birth"] = df["population"] * df["BirthRate"]
-df["Pop_Migration"] = df["population"] * df["MigrationRate"]
-df["Pop_Youth"] = df["population"] * df["AgeFactor"]
+# Convert to decimal
+df["birthrate"] = df["birthrate"] / 100
+df["migrationrate"] = df["migrationrate"] / 100
+df["agefactor"] = df["age_group15_19"] / 100
+
+# Interaction features
+df["pop_birth"] = df["population"] * df["birthrate"]
+df["pop_migration"] = df["population"] * df["migrationrate"]
+df["pop_youth"] = df["population"] * df["agefactor"]
 
 # -------------------------------
 # Step 3: Prepare ML Model
@@ -28,14 +44,14 @@ df["Pop_Youth"] = df["population"] * df["AgeFactor"]
 
 features = [
     "population",
-    "Pop_Birth",
-    "Pop_Migration",
-    "Pop_Youth"
+    "pop_birth",
+    "pop_migration",
+    "pop_youth"
 ]
 
 X = df[features]
 
-# 🎯 IMPORTANT CHANGE: real target
+# Target
 y = df["aadhaar_centers"]
 
 # Scaling
@@ -47,56 +63,91 @@ model = LinearRegression()
 model.fit(X_scaled, y)
 
 # -------------------------------
-# Step 4: Predict Current Centres (model validation)
+# Step 4: Predict Current Centres
 # -------------------------------
-df["Predicted_Centres_Current"] = model.predict(X_scaled)
+
+df["predicted_centres_current"] = model.predict(X_scaled)
+
+# Ensure no negative predictions
+df["predicted_centres_current"] = df["predicted_centres_current"].clip(lower=0)
 
 # -------------------------------
 # Step 5: Estimate Next Year Demand
 # -------------------------------
 
-df["Estimated_Demand_Next_Year"] = (
-    df["population"] * (df["BirthRate"] + 0.02) +
-    df["population"] * df["MigrationRate"] +
-    df["population"] * df["AgeFactor"] * 0.4
+df["estimated_demand_next_year"] = (
+    df["population"] * (df["birthrate"] + 0.02) +
+    df["population"] * df["migrationrate"] +
+    df["population"] * df["agefactor"] * 0.4
 )
 
 # -------------------------------
 # Step 6: Convert Demand → Centres
 # -------------------------------
 
-# Dynamic capacity (urban areas need more handling)
-df["Capacity_per_Centre"] = np.where(
+df["capacity_per_centre"] = np.where(
     df["population"] > 500000,
     25000,
     18000
 )
 
-df["Required_Centres_Next_Year"] = np.ceil(
-    df["Estimated_Demand_Next_Year"] / df["Capacity_per_Centre"]
+df["required_centres_next_year"] = np.ceil(
+    df["estimated_demand_next_year"] / df["capacity_per_centre"]
 )
 
 # -------------------------------
 # Step 7: Extra Centres Needed
 # -------------------------------
-df["Extra_Centres_Required"] = (
-    df["Required_Centres_Next_Year"] - df["aadhaar_centers"]
+
+df["extra_centres_required"] = (
+    df["required_centres_next_year"] - df["aadhaar_centers"]
 )
 
-df["Extra_Centres_Required"] = df["Extra_Centres_Required"].apply(lambda x: max(0, x))
+# Ensure no negative values
+df["extra_centres_required"] = df["extra_centres_required"].clip(lower=0)
 
 # -------------------------------
-# Step 8: Output
+# Step 8: Categorization (IMPORTANT for Power BI)
 # -------------------------------
+
+def categorize(x):
+    if x > 10:
+        return "High"
+    elif x > 3:
+        return "Medium"
+    else:
+        return "Low"
+
+df["category"] = df["extra_centres_required"].apply(categorize)
+
+# -------------------------------
+# Step 9: Final Output
+# -------------------------------
+
 result = df[[
     "pincode",
     "population",
     "aadhaar_centers",
-    "Predicted_Centres_Current",
-    "Required_Centres_Next_Year",
-    "Extra_Centres_Required"
+    "predicted_centres_current",
+    "required_centres_next_year",
+    "extra_centres_required",
+    "category"
 ]]
 
-result.to_csv("aadhaar_centre_prediction_output.csv", index=False)
+# Save CSV (optional)
+output_path = os.path.join(current_dir, "aadhaar_centre_prediction_output.csv")
+result.to_csv(output_path, index=False)
 
-print(result.head(20))
+print("✅ Output CSV generated!")
+print(result.head(10))
+
+# -------------------------------
+# Step 10: Push to MySQL (Power BI)
+# -------------------------------
+
+# CHANGE PASSWORD HERE
+engine = create_engine("mysql+pymysql://root:123456789@localhost/aadhaar_db")
+
+result.to_sql("aadhaar_report", con=engine, if_exists="replace", index=False)
+
+print("✅ Data uploaded to MySQL successfully!")
